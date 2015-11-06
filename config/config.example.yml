@@ -1,0 +1,14 @@
+# api_key: <API key goes here>
+
+# The slice size used when pushing to your local database. Too large and I got timeouts.
+# I settled on 1,000 as it sidestepped these timeouts.
+subset: 1000
+
+# assist_config:
+#   adapter: <e.g. tinytds>
+#   username: <user>
+#   password: <pass>
+#   host: <db host>
+#   database: <db>
+#   appname: <this will show up in your DB monitoring/logging>
+#   timeout: 60

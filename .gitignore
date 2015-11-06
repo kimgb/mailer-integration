@@ -1,0 +1,13 @@
+# Ignore config files, except example files.
+/config/*
+!/config/*example*
+
+# Ignore integration files, except example files.
+/integrations/*
+!/integrations/*example*
+
+# Files with a preceding underscore are unused, and ignored.
+_*
+
+# Don't commit log files.
+/log/*
