@@ -1,10 +1,12 @@
 # api_key: <API key goes here>
+# mailer_uri: <Active Campaign address>
+# mailer_port: <Active Campaign port (443 for SSL usually)
 
 # The slice size used when pushing to your local database. Too large and I got timeouts.
-# I settled on 1,000 as it sidestepped these timeouts.
+# I settled on 1,000 as it reliably sidestepped these timeouts.
 subset: 1000
 
-# assist_config:
+# db_config:
 #   adapter: <e.g. tinytds>
 #   username: <user>
 #   password: <pass>

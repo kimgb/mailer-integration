@@ -8,3 +8,4 @@
 
 # Don't commit log files.
 */log/*
+/log/*
