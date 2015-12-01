@@ -4,7 +4,7 @@
 
 # Don't commit integration files, except the example integration.
 /integrations/*
-!/integrations/_example/*
+!/integrations/_example/**/*
 
 # Don't commit log files.
 */log/*
