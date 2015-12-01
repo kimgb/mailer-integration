@@ -17,22 +17,22 @@ OptionParser.new do |opts|
     no_down = true
   end
 
-  opts.on("--no-up", "Don't run any of the integrations to Active Campaign.") do
+  opts.on("--no-up", "Don't run any of the 'up' integrations", "to Active Campaign") do
     no_up = true
   end
 
   opts.on_tail("-h", "--help", "Show this message") { puts opts; exit }
 end.parse!
 
-# the pull integration bases itself out of app_root, has
+# the pull integration bases itself out of APP_ROOT
 unless no_down
-  down_sync = Mailer::Integration::Pull.new(app_root)
+  down_sync = Mailer::Integration::Pull.new(APP_ROOT)
   down_sync.run!
 end
 
 unless no_up
   # load all integration folders into an array
-  integrations = Pathname.glob(app_root + "integrations" + "*")
+  integrations = Pathname.glob(APP_ROOT + "integrations" + "*")
   integrations.each do |integration|
     # ignore disabled integrations
     next if integration.basename.to_s.start_with?("_")
