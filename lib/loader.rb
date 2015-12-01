@@ -16,8 +16,8 @@ require 'sequel'
 APP_ROOT = Pathname(__FILE__).dirname.parent
 
 # Load in our config files, and initialise constants
-APP_CONFIG ||= YAML.load(File.read(app_root + "config" + "config.yml")).freeze
-PULL_CONFIG ||= YAML.load(File.read(app_root + "config" + "pull.yml")).freeze
+APP_CONFIG ||= YAML.load(File.read(APP_ROOT + "config" + "config.yml")).freeze
+PULL_CONFIG ||= YAML.load(File.read(APP_ROOT + "config" + "pull.yml")).freeze
 
 DB ||= Sequel.connect(APP_CONFIG[:db_connect])
 CAMPAIGN = PULL_CONFIG[:campaign].freeze
