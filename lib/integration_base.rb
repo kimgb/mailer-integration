@@ -14,7 +14,7 @@ module Mailer
     end
 
     def logger
-      @logger ||= Logger.new(log_dir + "sync.log", "monthly")
+      @logger ||= ::Logger.new(log_dir + "sync.log", "monthly")
     end
 
     def run_file

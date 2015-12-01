@@ -6,6 +6,7 @@ require 'active_support/core_ext/string/inflections'
 # Core Ruby dependencies
 require 'yaml'
 require 'pathname'
+require 'logger'
 require 'net/http'
 require 'net/https'
 require 'json'

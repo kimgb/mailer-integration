@@ -3,7 +3,6 @@
 !/config/*example*
 
 # Don't commit integration files, except the example integration.
-!/integrations
 /integrations/*
 !/integrations/_example
 
