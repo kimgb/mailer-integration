@@ -12,12 +12,16 @@ require 'json'
 require 'optparse'
 require 'sequel'
 
-# Load in our config files
+# Load in our config files, and initialise constants
 APP_CONFIG ||= YAML.load(File.read(app_root + "config" + "config.yml")).freeze
 PULL_CONFIG ||= YAML.load(File.read(app_root + "config" + "pull.yml")).freeze
-DB ||= Sequel.connect(APP_CONFIG[:db_connect]) # TODO can replace db_adapter.rb?
 
-# Lastly, our lib files - sometimes relying on the constants defined above
+DB ||= Sequel.connect(APP_CONFIG[:db_connect])
+CAMPAIGN = PULL_CONFIG[:campaign].freeze
+SUBSCRIBER = PULL_CONFIG[:subscriber].freeze
+JUNCTION = PULL_CONFIG[:junction].freeze
+
+# Lastly, our lib files - as they sometimes rely on the constants defined above
 require_relative 'integration_base'
 require_relative 'integration/push'
 require_relative 'integration/configuration'

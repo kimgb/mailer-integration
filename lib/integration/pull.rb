@@ -1,8 +1,3 @@
-MODELS = PULL_CONFIG[:models].freeze
-CAMPAIGN = MODELS[:campaign].freeze
-SUBSCRIBER = MODELS[:subscriber].freeze
-JUNCTION = MODELS[:junction].freeze
-
 class Mailer::Integration::Pull < Mailer::Integration
   def initialize(path)
     if path.directory?
