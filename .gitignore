@@ -1,6 +1,6 @@
 # Don't commit config files, except example files.
 /config/*
-!/config/*example*
+!/config/_example/*
 
 # Don't commit integration files, except the example integration.
 /integrations/*
