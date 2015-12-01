@@ -13,6 +13,7 @@ class Mailer::Integration::Push::Configuration
   end
 
   def friendly_field_map(contact)
-    field_map.map { |k, v| ["field[#{v},0]", contact[k]] }.to_h
+    Hash[*field_map.map { |k, v| ["field[#{v},0]", contact[k]] }.flatten]
+    # in ruby 2.1+ => field_map.map { |k, v| ["field[#{v},0]", contact[k]] }.to_h
   end
 end
