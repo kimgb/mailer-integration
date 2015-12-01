@@ -1,6 +1,5 @@
 require_relative 'loader'
 
-app_root = Pathname(__FILE__).dirname.parent
 log_level = 1
 no_down = false
 no_up = false

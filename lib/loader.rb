@@ -12,6 +12,9 @@ require 'json'
 require 'optparse'
 require 'sequel'
 
+# Set app root directory
+app_root = Pathname(__FILE__).dirname.parent
+
 # Load in our config files, and initialise constants
 APP_CONFIG ||= YAML.load(File.read(app_root + "config" + "config.yml")).freeze
 PULL_CONFIG ||= YAML.load(File.read(app_root + "config" + "pull.yml")).freeze
