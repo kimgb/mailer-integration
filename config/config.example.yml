@@ -1,16 +1,17 @@
 # api_key: <API key goes here>
 # mailer_uri: <Active Campaign address>
-# mailer_port: <Active Campaign port (443 for SSL usually)
+# mailer_port: <Active Campaign port (e.g. 443 for SSL)
 
 # The slice size used when pushing to your local database. Too large and I got timeouts.
-# I settled on 1,000 as it reliably sidestepped these timeouts.
+# I settled on 1,000 as it reliably sidestepped these timeouts. Your db may be different.
 subset: 1000
 
-# db_config:
+# Connection details - see Sequel and TinyTDS for details of what is expected here.
+# db_connect:
 #   adapter: <e.g. tinytds>
 #   username: <user>
 #   password: <pass>
 #   host: <db host>
 #   database: <db>
-#   appname: <this will show up in your DB monitoring/logging>
+#   appname: <this will show up in your DB activity monitor/logs>
 #   timeout: 60
