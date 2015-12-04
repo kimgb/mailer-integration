@@ -8,9 +8,14 @@ class Mailer::Integration::Pull < Mailer::Integration
 
     # Some dastardly metaprogramming to set up some Sequel models from a user-supplied config file. Within the Pull class, we can use ::Campaign, ::Subscriber, and ::Junction when needed.
     ["campaign", "subscriber", "junction"].each do |m|
-      dataset = MODELS[m.to_sym][:name].downcase.to_sym
+      # 'Dataset' in this case means table name - as defined in your config file.
+      dataset = ::PULL_CONFIG[m.to_sym][:name].downcase.to_sym
+
+      # Define a new Sequel::Model that looks up the table/dataset determined above.
       klass = Class.new(Sequel::Model(dataset)) do
-        MODELS[m.to_sym][:associations].each do |assoc|
+        # The config file defines the assocations e.g. many-to-one between tables.
+        ::PULL_CONFIG[m.to_sym][:associations].each do |assoc|
+          # If your tables don't conform to Sequel conventions, you'll need to pass in some opts to get the foreign keys etc. right.
           method(assoc[:type]).call(assoc[:model], assoc[:opts])
         end
       end
