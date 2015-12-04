@@ -12,6 +12,7 @@ require 'net/https'
 require 'json'
 require 'optparse'
 require 'sequel'
+require 'slack-notifier'
 
 # Set app root directory
 APP_ROOT = Pathname(__FILE__).dirname.parent

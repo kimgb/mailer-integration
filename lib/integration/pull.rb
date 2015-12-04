@@ -19,6 +19,14 @@ class Mailer::Integration::Pull < Mailer::Integration
     end
   end
 
+  def notifier
+    if ::PULL_CONFIG[:slack_webhook]
+      @notifier ||= Slack::Notifier.new ::PULL_CONFIG[:slack_webhook], channel: "#comms"
+    else
+      false
+    end
+  end
+
   def run!
     logger.info "*** BEGINNING SYNC FROM MAILER ***"
 
@@ -69,6 +77,10 @@ class Mailer::Integration::Pull < Mailer::Integration
     messages = campaign["messages"]
 
     if (message = messages.first)
+      if notifier
+        notifier.ping "Update on email '#{message["subject"]}' - sent to #{campaign["send_amt"]}, #{campaign["uniqueopens"]} unique opens, #{campaign["uniquelinkclicks"]} unique link clicks."
+      end
+
       # store message to the database.
       @campaign = ::Campaign.find(CAMPAIGN[:campaign_id] => campaign["id"]) ||
         ::Campaign.new({
