@@ -83,8 +83,11 @@ class Mailer::Integration::Pull < Mailer::Integration
 
     if (message = messages.first)
       if notifier
-        notifier.ping "Update on email '#{message["subject"]}' - sent to #{campaign["send_amt"]}, #{campaign["uniqueopens"]} unique opens, #{campaign["uniquelinkclicks"]} unique link clicks."
+        open_rate = "#{(campaign["uniqueopens"].to_f / campaign["send_amt"]).round(2)}%"
+        click_rate = "#{(campaign["uniquelinkclicks"].to_f / campaign["uniqueopens"]).round(2)}%"
+        notifier.ping "'#{message["subject"]}' - sent to #{campaign["send_amt"]}, with #{campaign["uniqueopens"]} unique opens (#{open_rate} open rate), and #{campaign["uniquelinkclicks"]} unique link clicks (#{click_rate} click rate)."
       end
+
 
       # store message to the database.
       @campaign = ::Campaign.find(CAMPAIGN[:campaign_id] => campaign["id"]) ||
@@ -185,47 +188,30 @@ class Mailer::Integration::Pull < Mailer::Integration
     logger.info "Performing batch sync with #{emails.size} emails, starting at " +
       "#{@timestamp = Time.now}"
 
-    subscribers = ::Subscriber.where(SUBSCRIBER[:email] => emails)
+    # subscribers = ::Subscriber.where(SUBSCRIBER[:email] => emails)
+    # sec_subscribers = ::Subscriber.where(SUBSCRIBER[:secondary_email] => emails)
     junction = ::Junction.where(campaign: campaign)
     logger.debug "Queries composed in #{timer}"
 
-    # Update junction records and subscribers, unless they're unsubscribed, with the latest health.
-    subscriber_updates = subscribers.exclude(SUBSCRIBER[:health] => ["unsubscribed", health])
-      .update(SUBSCRIBER[:health] => health)
-    logger.info "Updated email health on #{subscriber_updates} Subscribers in #{timer}"
+    # For each pair of relevant columns, look up and update subscribers who match an email.
+    [{ email: :email, health: :health }, { email: :secondary_email, health: :secondary_health }].each do |e|
+      subscribers = ::Subscriber.where(SUBSCRIBER[e[:email]] => emails)
 
-    # Update receipt status on the junction records by inner joining to subscribers
-    junction_updates = junction.join(subscribers, JUNCTION[:subscriber_key] => SUBSCRIBER[:key])
-      .exclude(JUNCTION[:receipt] => health).update(JUNCTION[:receipt] => health)
-    logger.info "Updated receipt status on #{junction_updates} junction rows in #{timer}"
+      # Update junction records and subscribers, unless they're unsubscribed, with the latest health.
+      subscriber_updates = subscribers.exclude(SUBSCRIBER[e[:health]] => ["unsubscribed", health]).update(SUBSCRIBER[e[:health]] => health)
+      logger.info "Updated email health on #{subscriber_updates} Subscribers in #{timer}"
 
-    # Create joins thru the junction table, where there are none yet. Note Sequel's double-underscore convention - shorthand for specifying explicitly the table and column to avoid ambiguity errors. Also note Sequel's t# convention - joined tables are aliased as t1, t2, etc.
-    inserts = subscribers.left_join(junction, SUBSCRIBER[:key] => JUNCTION[:subscriber_key])
-      .where("t1__#{JUNCTION[:campaign_key]}".to_sym => nil)
-      .select("#{JUNCTION[:subscriber]}__#{SUBSCRIBER[:key]}".to_sym)
-      .distinct.map { |c| [c[SUBSCRIBER[:key]], campaign[CAMPAIGN[:key]], *(JUNCTION[:static_cols] || {}).values, health] }
-    logger.debug "Composed insert in #{timer}, now executing"
+      # Update receipt status on the junction records by inner joining to subscribers
+      junction_updates = junction.join(subscribers, JUNCTION[:subscriber_key] => SUBSCRIBER[:key]).exclude(JUNCTION[:receipt] => health).update(JUNCTION[:receipt] => health)
+      logger.info "Updated receipt status on #{junction_updates} junction rows in #{timer}"
 
-    # And insert them in a batch
-    ::Junction.import(
-      [JUNCTION[:subscriber_key], JUNCTION[:campaign_key], *JUNCTION[:static_cols].keys,
-       JUNCTION[:receipt]], inserts)
-    logger.info "Inserted #{inserts.size} new rows to the ContactRec table in #{timer}"
-  end
+      # Create joins thru the junction table, where there are none yet. Note Sequel's double-underscore convention - shorthand for specifying explicitly the table and column to avoid ambiguity errors. Also note Sequel's t# convention - joined tables are aliased as t1, t2, etc.
+      inserts = subscribers.left_join(junction, SUBSCRIBER[:key] => JUNCTION[:subscriber_key]).where("t1__#{JUNCTION[:campaign_key]}".to_sym => nil).select("#{JUNCTION[:subscriber]}__#{SUBSCRIBER[:key]}".to_sym).distinct.map { |c| [c[SUBSCRIBER[:key]], campaign[CAMPAIGN[:key]], *(JUNCTION[:static_cols] || {}).values, health] }
+      logger.debug "Composed insert in #{timer}, now executing"
 
-  # - Locate a Subscriber with matching Email
-  # - Update the email health field, based on precedence
-  # - Associate the Subscriber to the Campaign
-  def sync_contact(email, health, campaign)
-    if (sub = ::Subscriber.find(SUBSCRIBER[:email] => email))
-      logger.debug "Found contact with email #{email}, syncing"
-      sub[SUBSCRIBER[:health]] != "unsubscribed" && (c[SUBSCRIBER[:health]] = health) && c.save
-      # Build association, unless it's already present
-      unless sub.campaigns.include?(campaign)
-        (junction = ::Junction.new({JUNCTION[:subscriber_key] => c[SUBSCRIBER[:key]],
-          JUNCTION[:campaign_key] => campaign[CAMPAIGN[:key]]}.merge(JUNCTION[:static_cols] || {}))
-        ) && junction.save
-      end
+      # And insert them in a batch
+      ::Junction.import([JUNCTION[:subscriber_key], JUNCTION[:campaign_key], *(JUNCTION[:static_cols] || {}).keys, JUNCTION[:receipt]], inserts)
+      logger.info "Inserted #{inserts.size} new rows to the ContactRec table in #{timer}"
     end
   end
 
@@ -233,7 +219,6 @@ class Mailer::Integration::Pull < Mailer::Integration
   def parse_request(request_object)
     JSON.parse(http_root.request(request_object).body)
   end
-
 
   ## Methods below are for instantiating request objects to the mailer API.
   def list_campaigns(page, since=nil)
@@ -245,6 +230,7 @@ class Mailer::Integration::Pull < Mailer::Integration
     else
       params[:ids] = "all"
     end
+    # returning 2015-12-14 - what the fuck. glad I went with the above version, but slightly in awe that I even came up with something so dense. -kbuckley
     # was gunning for impenetrability with this version:
     #params.[]=(*since ? [:filters,{ldate_since_datetime: since}] : [:ids,"all"])
 
@@ -252,11 +238,7 @@ class Mailer::Integration::Pull < Mailer::Integration
     Net::HTTP::Get.new("/admin/api.php?#{query_params}")
   end
 
-  ## So. These campaign report lists are super inconsistent. Some paginated
-  ## (and sorted), some not. Some need message_id as well as campaign_id, some
-  ## don't. Can't even get unopens working - from the API explorer, let alone
-  ## in my own program! And they all return different data, arranged in
-  ## different ways. Abstraction is difficult under the circumstances.
+  # So. These campaign report lists are super inconsistent. Some paginated (and sorted), some not. Some need message_id as well as campaign_id, some don't. Can't even get unopens working - from the API explorer, let alone in my own program! And they all return different data, arranged in different ways. Abstraction is difficult under the circumstances.
 
   # can't get this one working.
   def _list_unopens(campaign_id, message_id)
