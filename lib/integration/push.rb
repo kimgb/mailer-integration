@@ -20,7 +20,7 @@ class Mailer::Integration::Push < Mailer::Integration
     @contacts = DB[config.table].where(config.constraints(read_runtime)).all
 
     logger.info "Found #{contacts.size} contacts to be synced"
-    logger.info "*** BEGINNING SYNC TO MAILER ***"
+    logger.info "BEGINNING SYNC TO MAILER"
 
     threads = []
     begin
@@ -69,7 +69,8 @@ class Mailer::Integration::Push < Mailer::Integration
 
     payload = {
       "p[#{config.list_id}]" => config.list_id,
-      # TODO instantresponder
+      "status[#{config.list_id}]" => contact[:status],
+      "instantresponders[#{config.list_id}]" => 1,
       "email" => contact[:email],
       "first_name" => contact[:firstname],
       "last_name" => contact[:lastname]
