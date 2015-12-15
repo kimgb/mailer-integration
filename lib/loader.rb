@@ -12,6 +12,7 @@ require 'net/https'
 require 'json'
 require 'optparse'
 require 'sequel'
+require 'pry'
 require 'slack-notifier'
 
 # Set app root directory
