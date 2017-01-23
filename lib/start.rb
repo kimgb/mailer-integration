@@ -5,10 +5,10 @@ no_down = false
 no_up = false
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: initialiser.rb [options]"
+  opts.banner = "Usage: ruby start.rb [options]"
 
   opts.on("-l", "--log-level=LEVEL", OptionParser::DecimalInteger,
-          "Set the log level. 0/debug - 4/fatal.", "Default is 1/info.") do |i|
+          "Set the log level. 0/debug - 4/fatal.", "  Default is 1/info.") do |i|
     raise OptionParser::InvalidArgument unless (0..4).include? i
     log_level = i
   end
@@ -17,7 +17,7 @@ OptionParser.new do |opts|
     no_down = true
   end
 
-  opts.on("--no-up", "Don't run any of the 'up' integrations", "to Active Campaign") do
+  opts.on("--no-up", "Don't run any of the 'up' integrations", "  to Active Campaign") do
     no_up = true
   end
 

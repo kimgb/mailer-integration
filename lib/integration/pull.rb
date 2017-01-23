@@ -82,15 +82,15 @@ class Mailer::Integration::Pull < Mailer::Integration
     messages = campaign["messages"]
 
     if (message = messages.first)
-      if notifier
-        open_rate = Float(campaign["uniqueopens"]) / Float(campaign["send_amt"])
-        open_rate = open_rate.nan? ? 0 : open_rate
+      #if notifier
+      #  open_rate = Float(campaign["uniqueopens"]) / Float(campaign["send_amt"])
+      #  open_rate = open_rate.nan? ? 0 : open_rate
 
-        click_rate = Float(campaign["uniquelinkclicks"]) / Float(campaign["uniqueopens"])
-        click_rate = click_rate.nan? ? 0 : click_rate
+      #  click_rate = Float(campaign["uniquelinkclicks"]) / Float(campaign["uniqueopens"])
+      #  click_rate = click_rate.nan? ? 0 : click_rate
 
-        notifier.ping "'#{message["subject"]}' - sent to #{campaign["send_amt"]}, with #{campaign["uniqueopens"]} unique opens (#{"%.2f%" % (open_rate * 100)} open rate), and #{campaign["uniquelinkclicks"]} unique link clicks (#{"%.2f%" % (click_rate * 100)} click rate)."
-      end
+      #  notifier.ping "'#{message["subject"]}' - sent to #{campaign["send_amt"]}, with #{campaign["uniqueopens"]} unique opens (#{"%.2f%" % (open_rate * 100)} open rate), and #{campaign["uniquelinkclicks"]} unique link clicks (#{"%.2f%" % (click_rate * 100)} click rate)."
+      #end
 
 
       # store message to the database.
