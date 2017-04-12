@@ -3,6 +3,12 @@ require 'active_support/core_ext/hash'
 # String inflections give us classify, constantize etc.
 require 'active_support/core_ext/string/inflections'
 
+# Installed Gems
+require 'slack-notifier'
+require 'sequel'
+require 'pry'
+require 'gibbon'
+
 # Core Ruby dependencies
 require 'yaml'
 require 'pathname'
@@ -11,9 +17,6 @@ require 'net/http'
 require 'net/https'
 require 'json'
 require 'optparse'
-require 'sequel'
-require 'pry'
-require 'slack-notifier'
 
 # Set app root directory
 APP_ROOT = Pathname(__FILE__).dirname.parent
