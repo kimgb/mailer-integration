@@ -1,5 +1,9 @@
 class Mailer::Integration::Pull < Mailer::Integration
+  attr_reader :gibbon
+
   def initialize(path)
+    @gibbon = Gibbon::Request.new
+
     if path.directory?
       @base_dir = path
     else
@@ -55,17 +59,17 @@ class Mailer::Integration::Pull < Mailer::Integration
 
   # Get campaigns, starting with the oldest. For each campaign, call sync_campaign.
   def sync_campaigns(opts={})
-    page = opts[:page] ||= 1
+    offset = opts[:offset] ||= 0
 
-    logger.info "REQUESTING PAGE #{page}, FILTER: #{opts[:filter] || 'None'}"
-    response = parse_request(list_campaigns(page, opts[:filter]))
+    logger.info "REQUESTING FROM OFFSET #{offset}"
+    response = list_campaigns(offset, opts[:filter]))
 
-    unless response["result_code"].zero? # 10 per page on campaigns
-      response.slice(*(0..9).map(&:to_s)).values.each do |campaign|
-        sync_campaign(campaign)
-      end
+    response.slice(*(0..9).map(&:to_s)).values.each do |campaign|
+      sync_campaign(campaign)
+    end
 
-      sync_campaigns(page: page + 1, filter: opts[:filter])
+    unless response.body["total_items"] < (offset + 10) # 10 per request by default on campaigns
+      sync_campaigns(offset: offset + 10, filter: opts[:filter])
     end
   end
 
@@ -91,7 +95,6 @@ class Mailer::Integration::Pull < Mailer::Integration
 
         notifier.ping "'#{message["subject"]}' - sent to #{campaign["send_amt"]}, with #{campaign["uniqueopens"]} unique opens (#{"%.2f%" % (open_rate * 100)} open rate), and #{campaign["uniquelinkclicks"]} unique link clicks (#{"%.2f%" % (click_rate * 100)} click rate)."
       end
-
 
       # store message to the database.
       @campaign = ::Campaign.find(CAMPAIGN[:campaign_id] => campaign["id"]) ||
@@ -225,21 +228,20 @@ class Mailer::Integration::Pull < Mailer::Integration
   end
 
   ## Methods below are for instantiating request objects to the mailer API.
-  def list_campaigns(page, since=nil)
-    params = { api_key: ::APP_CONFIG[:api_key], api_action: "campaign_list",
-               api_output: "json", sort: "cdate", sort_direction: "ASC",
-               page: page }
+  def list_campaigns(offset, since = nil)
+    params = {
+      list_id: ::PULL_CONFIG[:list_id], status: "sent", offset: offset,
+      sort_field: "send_time", sort_dir: "ASC"
+    }
+
     if since
-      params[:filters] = { ldate_since_datetime: since }
-    else
-      params[:ids] = "all"
+      params[:since_send_time] = since
     end
     # returning 2015-12-14 - what the fuck. glad I went with the above version, but slightly in awe that I even came up with something so dense. -kbuckley
     # was gunning for impenetrability with this version:
     #params.[]=(*since ? [:filters,{ldate_since_datetime: since}] : [:ids,"all"])
 
-    query_params = queryise(params)
-    Net::HTTP::Get.new("/admin/api.php?#{query_params}")
+    gibbon.campaigns.retrieve(params: params)
   end
 
   # So. These campaign report lists are super inconsistent. Some paginated (and sorted), some not. Some need message_id as well as campaign_id, some don't. Can't even get unopens working - from the API explorer, let alone in my own program! And they all return different data, arranged in different ways. Abstraction is difficult under the circumstances.
