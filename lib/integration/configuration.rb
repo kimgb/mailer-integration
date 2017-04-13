@@ -1,10 +1,10 @@
 class Mailer::Integration::Push::Configuration
-  attr_reader :list_id, :table, :field_map, :since
+  attr_reader :list_id, :table, :field_exclusions, :since
 
   def initialize(yaml)
     @list_id = yaml[:list_id]
     @table = yaml[:table]
-    @field_map = yaml[:field_map]
+    @field_exclusions = yaml[:field_exclusions]
     @since = yaml[:since]
   end
 
@@ -12,8 +12,7 @@ class Mailer::Integration::Push::Configuration
     since.map { |col| "#{col} > '#{last_run}'" }.join(" OR ")
   end
 
-  def friendly_field_map(contact)
-    Hash[*field_map.map { |k, v| ["field[#{v},0]", contact[k]] }.flatten]
-    # in ruby 2.1+ => field_map.map { |k, v| ["field[#{v},0]", contact[k]] }.to_h
+  def merge_fields(contact)
+    contact.stringify_keys.except(*(since+field_exclusions+['email', 'subscription_status'])).keys
   end
 end

@@ -1,5 +1,5 @@
 :list_id: 111 #id of the target list on Active Campaign
-:table: :integrationMain #can be the name of a table or view, Sequel's not fussy
+:table: :emailIntegrationMailChimp #can be the name of a table or view, Sequel's not fussy
 :since: # an array of datetime columns that are checked against the sync's last run time
   - SubscriberModified
   - RoleChanged

@@ -39,10 +39,13 @@ module Mailer
     end
 
     def set_http_root(root_name)
-      http = instance_variable_set(root_name, ::Net::HTTP.new(::APP_CONFIG[:mailer_uri], ::APP_CONFIG[:mailer_port]))
-      http.use_ssl = true
-      http.verify_mode = ::OpenSSL::SSL::VERIFY_NONE
+      # http = instance_variable_set(root_name, ::Net::HTTP.new(::APP_CONFIG[:mailer_uri], ::APP_CONFIG[:mailer_port]))
+      # http.use_ssl = true
+      # http.verify_mode = ::OpenSSL::SSL::VERIFY_NONE
+      #
+      # http
 
+      http = instance_variable_set(root_name, Gibbon::Request.new(api_key: ::APP_CONFIG[:api_key], debug: ::APP_CONFIG[:api_debug], symbolize_keys: true))
       http
     end
 
@@ -60,10 +63,6 @@ module Mailer
 
     def save_runtime(time)
       File.open(run_file, "w") { |f| f.puts time.utc.strftime("%FT%T") }
-    end
-
-    def queryise(hash)
-      rollup_and_flatten_hash(hash).each_slice(2).map{ |a| URI.encode(a.join("=")) }.join("&")
     end
 
     # flattens a hash into an array while rolling up nested keys (recursive)

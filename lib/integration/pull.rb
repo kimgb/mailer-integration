@@ -62,7 +62,7 @@ class Mailer::Integration::Pull < Mailer::Integration
     offset = opts[:offset] ||= 0
 
     logger.info "REQUESTING FROM OFFSET #{offset}"
-    response = list_campaigns(offset, opts[:filter]))
+    response = list_campaigns(offset, opts[:filter])
 
     response.slice(*(0..9).map(&:to_s)).values.each do |campaign|
       sync_campaign(campaign)
