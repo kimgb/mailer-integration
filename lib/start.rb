@@ -1,3 +1,5 @@
+#!/usr/bin/ruby
+
 require_relative 'loader'
 
 log_level = 1
@@ -40,6 +42,7 @@ unless no_up
       up_sync = Mailer::Integration::Push.new(integration)
       up_sync.logger.level = log_level
       up_sync.run!
+    # this is pretty opaque. Am I expecting ::new or #run! to throw this?
     rescue ArgumentError => e
       "Path was not a directory, skipping this integration"
     end

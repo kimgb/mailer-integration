@@ -25,6 +25,9 @@ APP_ROOT = Pathname(__FILE__).dirname.parent
 APP_CONFIG ||= YAML.load(File.read(APP_ROOT + "config" + "config.yml")).freeze
 PULL_CONFIG ||= YAML.load(File.read(APP_ROOT + "config" + "pull.yml")).freeze
 
+# Set API key on Gibbon globally
+Gibbon::Request.api_key = APP_CONFIG[:api_key]
+
 DB ||= Sequel.connect(APP_CONFIG[:db_connect])
 CAMPAIGN = PULL_CONFIG[:campaign].freeze
 SUBSCRIBER = PULL_CONFIG[:subscriber].freeze

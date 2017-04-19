@@ -30,49 +30,20 @@ module Mailer
       @log_dir
     end
 
-    def http_root(i = nil)
-      if i
-        instance_variable_get("@root#{i}") || set_http_root("@root#{i}")
-      else
-        @root || set_http_root("@root")
-      end
-    end
-
-    def set_http_root(root_name)
-      http = instance_variable_set(root_name, ::Net::HTTP.new(::APP_CONFIG[:mailer_uri], ::APP_CONFIG[:mailer_port]))
-      http.use_ssl = true
-      http.verify_mode = ::OpenSSL::SSL::VERIFY_NONE
-
-      http
-    end
-
     # def parse_request(request_object)
     #   JSON.parse(root.request(request_object).body)
     # end
 
     def read_runtime
       if File.exists?(run_file)
-        Time.parse(File.open(run_file, &:readline).strip).utc.strftime("%FT%T")
+        DateTime.parse(File.open(run_file, &:readline).strip)
       else
-        Time.parse('1970-01-01').utc.strftime("%FT%T")
+        DateTime.parse('1970-01-01')
       end
     end
 
     def save_runtime(time)
       File.open(run_file, "w") { |f| f.puts time.utc.strftime("%FT%T") }
-    end
-
-    def queryise(hash)
-      rollup_and_flatten_hash(hash).each_slice(2).map{ |a| URI.encode(a.join("=")) }.join("&")
-    end
-
-    # flattens a hash into an array while rolling up nested keys (recursive)
-    # { filters: { since: "2015-06-21" } } => ["filters[since]", "2015-06-21"]
-    def rollup_and_flatten_hash(hash, key="")
-      hash.flat_map do |k, v|
-        new_key = key + (key.empty? ? "#{k}" : "[#{k}]")
-        v.is_a?(Hash) ? rollup_and_flatten_hash(v, new_key) : [new_key, v]
-      end
     end
   end
 end

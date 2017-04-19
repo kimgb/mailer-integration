@@ -9,7 +9,7 @@ class Mailer::Integration::Push::Configuration
   end
 
   def constraints(last_run)
-    since.map { |col| "#{col} > '#{last_run}'" }.join(" OR ")
+    since.map { |col| "#{col} > '#{last_run.strftime("%F")}'" }.join(" OR ")
   end
 
   def friendly_field_map(contact)
