@@ -30,6 +30,20 @@ module Mailer
       @log_dir
     end
 
+    def http_root(i = nil)
+      if i
+        instance_variable_get("@root#{i}") || set_http_root("@root#{i}")
+      else
+        @root || set_http_root("@root")
+      end
+    end
+
+    def set_http_root(root_name)
+      http = instance_variable_set(root_name, Gibbon::Request.new(api_key: ::APP_CONFIG[:api_key], debug: ::APP_CONFIG[:api_debug], symbolize_keys: true))
+
+      http
+    end
+
     # def parse_request(request_object)
     #   JSON.parse(root.request(request_object).body)
     # end
