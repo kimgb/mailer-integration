@@ -12,7 +12,10 @@ class Mailer::Integration::Push::Configuration
     since.map { |col| "#{col} > '#{last_run.strftime("%F")}'" }.join(" OR ")
   end
 
-  def merge_fields(contact)
-    contact.stringify_keys.except(*(since+field_exclusions+['email', 'subscription_status'])).keys
+  def merge_fields(columns) #(contact)
+    all_exclusions = [*(since + field_exclusions + ['email', 'subscription_status'])]
+    columns.map(&:to_s).reject { |col| col.start_with?("interest") } - all_exclusions
+
+    # contact.stringify_keys.except(*(since+field_exclusions+['email', 'subscription_status'])).keys
   end
 end

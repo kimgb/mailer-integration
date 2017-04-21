@@ -7,7 +7,7 @@ no_down = false
 no_up = false
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: initialiser.rb [options]"
+  opts.banner = "Usage: start [options]"
 
   opts.on("-l", "--log-level=LEVEL", OptionParser::DecimalInteger,
           "Set the log level. 0/debug - 4/fatal.", "Default is 1/info.") do |i|

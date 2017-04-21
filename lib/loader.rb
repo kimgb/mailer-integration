@@ -28,12 +28,20 @@ PULL_CONFIG ||= YAML.load(File.read(APP_ROOT + "config" + "pull.yml")).freeze
 # Set API key on Gibbon globally
 Gibbon::Request.api_key = APP_CONFIG[:api_key]
 
+# Database and API objects
 DB ||= Sequel.connect(APP_CONFIG[:db_connect])
+# `sequel -m db/migrations/ sqlite://app.db`
+APPDB ||= Sequel.sqlite((APP_ROOT + "db" + "app.db").to_s)
+API = Gibbon::Request.new
+
+# Schema transformations
 CAMPAIGN = PULL_CONFIG[:campaign].freeze
 SUBSCRIBER = PULL_CONFIG[:subscriber].freeze
 JUNCTION = PULL_CONFIG[:junction].freeze
 
 # Lastly, our lib files - as they sometimes rely on the constants defined above
+require_relative '../models/category'
+require_relative '../models/interest'
 require_relative 'integration_base'
 require_relative 'integration/push'
 require_relative 'integration/configuration'

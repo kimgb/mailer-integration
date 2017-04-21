@@ -1,7 +1,7 @@
 require 'digest'
 
 class Mailer::Integration::Push < Mailer::Integration
-  attr_reader :config, :contacts
+  attr_reader :config, :contacts, :columns
 
   # Mailer::Integration::Push.new()
   def initialize(path)
@@ -13,15 +13,22 @@ class Mailer::Integration::Push < Mailer::Integration
 
     @thread_count = ::APP_CONFIG[:thread_count]
     @config = Configuration.new(YAML.load(File.read(base_dir + (base_dir.basename.to_s + ".yml"))))
+    @columns = DB[config.table].columns
   end
 
   def run!
     @this_runtime = Time.new.utc
     logger.info "Run commencement at #{@this_runtime} (all times in UTC)"
+    logger.info "Syncing interests"
+
+    sync_interests()
+
+    logger.info "Done syncing interests"
     logger.info "Fetching contacts to be synced from database"
 
     @contacts = DB[config.table].where(config.constraints(read_runtime)).all
-    create_fields(config.merge_fields(@contacts[0])) if @contacts.size > 0
+    create_fields(config.merge_fields(columns)) unless @contacts.empty?
+    # create_fields(config.merge_fields(@contacts[0])) if @contacts.size > 0
 
     logger.info "Found #{contacts.size} contacts to be synced"
     logger.info "BEGINNING SYNC TO MAILER"
@@ -45,6 +52,47 @@ class Mailer::Integration::Push < Mailer::Integration
   end
 
   private
+  # TODO For ease of operation in development etc, needs to pick up on
+  # categories and interests that have already been pushed to Mailchimp.
+  def sync_interests
+    # Get our Interest columns, and discard the signifier.
+    interest_categories = columns.map(&:to_s)
+      .select { |col| col.gsub!(/^interest/, "") }
+      .map { |col| col.split("_") }
+      .group_by(&:first) # Group by category title
+      .map { |k,v| [k, v.map(&:last)] } # Remove category title from groups
+
+    interest_categories.each(&method(:sync_category_and_interests))
+  end
+
+  def sync_category_and_interests(category_and_interests)
+    category_title, interest_names = category_and_interests
+    category = Category.find(list_id: config.list_id, title: category_title) || create_interest_category(category_title)
+
+    interests = interest_names.map do |name|
+      Interest.find(name: name) || create_interest(category, name)
+    end
+
+    [category, interests]
+  end
+
+  # Creates an interest category for a Mailchimp list, given a list ID and a
+  # title.
+  def create_interest_category(title)
+    logger.info "Creating interest category '#{title}'"
+    response = API.lists(config.list_id).interest_categories.create(body: { title: title, type: "hidden" })
+
+    Category.create(mailchimp_id: response.body["id"], title: title, list_id: config.list_id)
+  end
+
+  # Creates an interest for a Mailchimp list, given a list ID, a category ID
+  # and a name.
+  def create_interest(category, name)
+    logger.info "Creating interest '#{name}' in category '#{category.title}'"
+    response = API.lists(config.list_id).interest_categories(category.mailchimp_id).interests.create(body: { name: name })
+
+    Interest.create(mailchimp_id: response.body["id"], name: name, category: category)
+  end
 
   # Spawns a subscriber sync thread.
   def sync_thread(i)
@@ -71,7 +119,6 @@ class Mailer::Integration::Push < Mailer::Integration
     end
 
   end
-
 
   def delete_all_fields
     existing_fields =  http_root.lists(config.list_id).merge_fields.retrieve(params: { fields: 'merge_fields.merge_id' }).body[:merge_fields].map{|i| i[:merge_id]}
@@ -124,13 +171,12 @@ class Mailer::Integration::Push < Mailer::Integration
     batch
   end
 
-  # Be aware - ActiveCampaign fields that are custom (that's most of them!)
-  # need to be created before use, either through the API or in the UI.
   def parameterise(contact)
     result = {
       "status" => contact[:subscription_status],
       "email_address" => contact[:email],
-      "merge_fields" => merge_fields(contact)
+      "merge_fields" => merge_fields(contact),
+      "interests" => interest_fields(contact)
     }
     result
     #payload.merge!(config.friendly_field_map(contact)) unless config.field_map.nil?
@@ -145,5 +191,14 @@ class Mailer::Integration::Push < Mailer::Integration
     end
 
     result
+  end
+
+  def interest_fields(contact)
+    contact.stringify_keys.select { |col| col =~ /^interest/ }.map do |k,v|
+      category, name = k.gsub(/^interest/, "").split("_")
+      interest = Interest.find_by_list_category_and_name(config.list_id, category, name)
+
+      [interest.mailchimp_id, v==1 ? true : false]
+    end.to_h
   end
 end

@@ -9,3 +9,6 @@
 # Don't commit log files.
 */log/*
 /log/*
+
+# Don't commit SQLite database files.
+*.db
