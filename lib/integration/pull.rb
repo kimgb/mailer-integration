@@ -1,9 +1,5 @@
 class Mailer::Integration::Pull < Mailer::Integration
-  attr_reader :gibbon
-
   def initialize(path)
-    @gibbon = Gibbon::Request.new
-
     if path.directory?
       @base_dir = path
     else
@@ -75,7 +71,7 @@ class Mailer::Integration::Pull < Mailer::Integration
   def sync_campaign(campaign)
     logger.info "STARTING SYNC FOR CAMPAIGN #{campaign["settings"]["title"].upcase}"
 
-    content = (gibbon.campaigns(campaign["id"]).content.retrieve).body
+    content = (API.campaigns(campaign["id"]).content.retrieve).body
     # TODO test if this pattern holds for non-regular campaigns (e.g. A/B tests, plaintext campaigns)
     message = (content["plain_text"] || content["html"]).gsub(/(?<!\r)\n/, "\r\n")
 
@@ -153,6 +149,8 @@ class Mailer::Integration::Pull < Mailer::Integration
     end
   end
 
+  # This method sets action priority and also maps Mailchimp action keywords to
+  # our legacy keywords.
   def action_with_priority(actions)
     return "unsubscribed" if actions.include?("unsubscribe")
     return "forwarded"    if actions.include?("forward")
@@ -162,7 +160,7 @@ class Mailer::Integration::Pull < Mailer::Integration
   end
 
   def get_campaign_activity(campaign_id, active_emails=[], offset=0)
-    response = gibbon.reports(campaign_id).email_activity.retrieve(params: { offset: offset })
+    response = API.reports(campaign_id).email_activity.retrieve(params: { offset: offset })
     active_emails = active_emails | response.body["emails"]
 
     if response.body["total_items"] < offset + 10
@@ -190,6 +188,6 @@ class Mailer::Integration::Pull < Mailer::Integration
     # was gunning for impenetrability with this version:
     #params.[]=(*since ? [:filters,{ldate_since_datetime: since}] : [:ids,"all"])
 
-    gibbon.campaigns.retrieve(params: params)
+    API.campaigns.retrieve(params: params)
   end
 end

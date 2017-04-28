@@ -58,16 +58,17 @@ class Mailer::Integration::Push < Mailer::Integration
     # Get our Interest columns, and discard the signifier.
     interest_categories = columns.map(&:to_s)
       .select { |col| col.gsub!(/^interest/, "") }
-      .map { |col| col.split("_") }
+      .map { |col| col.split("$") }
       .group_by(&:first) # Group by category title
       .map { |k,v| [k, v.map(&:last)] } # Remove category title from groups
+      .to_h # so that the category and interests get parsed as two args below
 
-    interest_categories.each(&method(:sync_category_and_interests))
+    interest_categories.each(&method(:sync_category_and_interests)) #{ |k, v| sync_category_and_interests(k, v) }
   end
 
-  def sync_category_and_interests(category_and_interests)
-    category_title, interest_names = category_and_interests
-    category = Category.find(list_id: config.list_id, title: category_title) || create_interest_category(category_title)
+  def sync_category_and_interests(category_title, interest_names)
+    category = Category.find(list_id: config.list_id, title: category_title) ||
+      create_interest_category(category_title)
 
     interests = interest_names.map do |name|
       Interest.find(name: name) || create_interest(category, name)
@@ -87,6 +88,8 @@ class Mailer::Integration::Push < Mailer::Integration
 
   # Creates an interest for a Mailchimp list, given a list ID, a category ID
   # and a name.
+  # TODO handle alteration and deletion through the Mailchimp web GUI. Perhaps
+  # attempt a GET on the interest path.
   def create_interest(category, name)
     logger.info "Creating interest '#{name}' in category '#{category.title}'"
     response = API.lists(config.list_id).interest_categories(category.mailchimp_id).interests.create(body: { name: name })
