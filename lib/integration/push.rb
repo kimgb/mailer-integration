@@ -27,6 +27,8 @@ class Mailer::Integration::Push < Mailer::Integration
     logger.info "Fetching contacts to be synced from database"
 
     @contacts = DB[config.table].where(config.constraints(read_runtime)).all
+
+    logger.info "Checking for new fields"
     create_fields(config.merge_fields(columns)) unless @contacts.empty?
     # create_fields(config.merge_fields(@contacts[0])) if @contacts.size > 0
 
@@ -109,18 +111,23 @@ class Mailer::Integration::Push < Mailer::Integration
   def create_fields(fields)
     http = http_root
 
-    existing_fields =  http.lists(config.list_id).merge_fields
+    existing_fields = http.lists(config.list_id).merge_fields
       .retrieve(params: { fields: "merge_fields.name", count: 1000 })
       .body[:merge_fields]
       .map{|i| i[:name]}
       .uniq
 
     new_fields = fields - existing_fields
-
-    new_fields.each do |f|
-      http.lists(config.list_id).merge_fields.create(body: {name: f.to_s, type: "text", tag: f.to_s})
+    if new_fields.empty?
+      logger.info "Found new fields #{new_fields}"
+    else
+      logger.info "No new fields found"
     end
 
+    new_fields.each do |f|
+      logger.info "Syncing new field #{f}"
+      http.lists(config.list_id).merge_fields.create(body: {name: f.to_s, type: "text", tag: f.to_s})
+    end
   end
 
   def delete_all_fields
