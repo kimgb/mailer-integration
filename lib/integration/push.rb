@@ -81,7 +81,7 @@ class Mailer::Integration::Push < Mailer::Integration
   # title.
   def create_interest_category(title)
     logger.info "Creating interest category '#{title}'"
-    response = API.lists(config.list_id).interest_categories.create(body: { title: title, type: "hidden" })
+    response = ::API.lists(config.list_id).interest_categories.create(body: { title: title, type: "hidden" })
 
     Category.create(mailchimp_id: response.body["id"], title: title, list_id: config.list_id)
   end
@@ -92,7 +92,7 @@ class Mailer::Integration::Push < Mailer::Integration
   # attempt a GET on the interest path.
   def create_interest(category, name)
     logger.info "Creating interest '#{name}' in category '#{category.title}'"
-    response = API.lists(config.list_id).interest_categories(category.mailchimp_id).interests.create(body: { name: name })
+    response = ::API.lists(config.list_id).interest_categories(category.mailchimp_id).interests.create(body: { name: name })
 
     Interest.create(mailchimp_id: response.body["id"], name: name, category: category)
   end

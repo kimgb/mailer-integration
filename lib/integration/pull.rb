@@ -71,7 +71,7 @@ class Mailer::Integration::Pull < Mailer::Integration
   def sync_campaign(campaign)
     logger.info "STARTING SYNC FOR CAMPAIGN #{campaign["settings"]["title"].upcase}"
 
-    content = (API.campaigns(campaign["id"]).content.retrieve).body
+    content = (::API.campaigns(campaign["id"]).content.retrieve).body
     # TODO test if this pattern holds for non-regular campaigns (e.g. A/B tests, plaintext campaigns)
     message = (content["plain_text"] || content["html"]).gsub(/(?<!\r)\n/, "\r\n")
 
@@ -160,7 +160,7 @@ class Mailer::Integration::Pull < Mailer::Integration
   end
 
   def get_campaign_activity(campaign_id, active_emails=[], offset=0)
-    response = API.reports(campaign_id).email_activity.retrieve(params: { offset: offset })
+    response = ::API.reports(campaign_id).email_activity.retrieve(params: { offset: offset })
     active_emails = active_emails | response.body["emails"]
 
     if response.body["total_items"] < offset + 10
@@ -174,7 +174,7 @@ class Mailer::Integration::Pull < Mailer::Integration
     { "open" => "opened", "click" => "clicked", "bounce" => "bounced", "unsubscribe" => "unsubscribed", "forward" => "forwarded" }
   end
 
-  ## Methods below are for instantiating request objects to the mailer API.
+  ## Methods below are for instantiating request objects to the mailer ::API.
   def list_campaigns(offset, since = nil)
     params = {
       list_id: ::PULL_CONFIG[:list_id], status: "sent", offset: offset,
@@ -188,6 +188,6 @@ class Mailer::Integration::Pull < Mailer::Integration
     # was gunning for impenetrability with this version:
     #params.[]=(*since ? [:filters,{ldate_since_datetime: since}] : [:ids,"all"])
 
-    API.campaigns.retrieve(params: params)
+    ::API.campaigns.retrieve(params: params)
   end
 end
