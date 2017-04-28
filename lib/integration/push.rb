@@ -119,9 +119,9 @@ class Mailer::Integration::Push < Mailer::Integration
 
     new_fields = fields - existing_fields
     if new_fields.empty?
-      logger.info "Found new fields #{new_fields}"
-    else
       logger.info "No new fields found"
+    else
+      logger.info "Found new fields #{new_fields}"
     end
 
     new_fields.each do |f|
@@ -205,7 +205,7 @@ class Mailer::Integration::Push < Mailer::Integration
 
   def interest_fields(contact)
     contact.stringify_keys.select { |col| col =~ /^interest/ }.map do |k,v|
-      category, name = k.gsub(/^interest/, "").split("_")
+      category, name = k.gsub(/^interest/, "").split("$")
       interest = Interest.find_by_list_category_and_name(config.list_id, category, name)
 
       [interest.mailchimp_id, v==1 ? true : false]
