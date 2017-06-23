@@ -73,7 +73,7 @@ class Mailer::Integration::Push < Mailer::Integration
       create_interest_category(category_title)
 
     interests = interest_names.map do |name|
-      Interest.find(name: name) || create_interest(category, name)
+      Interest.find(name: name, category: category) || create_interest(category, name)
     end
 
     [category, interests]
@@ -83,9 +83,19 @@ class Mailer::Integration::Push < Mailer::Integration
   # title.
   def create_interest_category(title)
     logger.info "Creating interest category '#{title}'"
-    response = ::API.lists(config.list_id).interest_categories.create(body: { title: title, type: "hidden" })
+
+    response = find_or_create_remote_interest_category(title)
 
     Category.create(mailchimp_id: response.body["id"], title: title, list_id: config.list_id)
+  end
+
+  def find_or_create_remote_interest_category(title)
+    API.lists(config.list_id).interest_categories.create(body: { title: title, type: "hidden" })
+  rescue Gibbon::MailChimpError => e
+    categories = API.lists(config.list_id).interest_categories.retrieve
+      .body["categories"].map { |c| [c["title"], c["id"]] }.to_h
+
+    API.lists(config.list_id).interest_categories(categories[title]).retrieve
   end
 
   # Creates an interest for a Mailchimp list, given a list ID, a category ID
@@ -94,9 +104,19 @@ class Mailer::Integration::Push < Mailer::Integration
   # attempt a GET on the interest path.
   def create_interest(category, name)
     logger.info "Creating interest '#{name}' in category '#{category.title}'"
-    response = ::API.lists(config.list_id).interest_categories(category.mailchimp_id).interests.create(body: { name: name })
+
+    response = find_or_create_remote_interest(category.mailchimp_id, name)
 
     Interest.create(mailchimp_id: response.body["id"], name: name, category: category)
+  end
+
+  def find_or_create_remote_interest(category_id, name)
+    API.lists(config.list_id).interest_categories(category_id).interests.create(body: { name: name })
+  rescue Gibbon::MailChimpError => e
+    interests = API.lists(config.list_id).interest_categories(category_id).interests.retrieve
+      .body["interests"].map { |i| [i["name"], i["id"]] }.to_h
+
+    API.lists(config.list_id).interest_categories(category_id).interests(interests[name]).retrieve
   end
 
   # Spawns a subscriber sync thread.
@@ -157,7 +177,7 @@ class Mailer::Integration::Push < Mailer::Integration
       }
     })
 
-    logger.info "Batch starting #{Time.now}"
+    logger.info "Batch #{batch.body[:id]} starting"
 
     batch = wait_for(http, batch.body[:id])
 
@@ -165,7 +185,7 @@ class Mailer::Integration::Push < Mailer::Integration
     errors = batch.body[:errored_operations]
     response_body_url = batch.body[:response_body_url]
 
-    logger.info "Batch finished #{Time.now}, #{errors} errors of #{total} members.  response_body_url: #{response_body_url}"
+    logger.info "Batch #{batch.body[:id]} finished, #{errors} errors of #{total} members.  response_body_url: #{response_body_url}"
 
     batch
   end
