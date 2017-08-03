@@ -6,7 +6,9 @@ class Mailer::Integration::Pull < Mailer::Integration
       raise ArgumentError, "#{path} is not a directory"
     end
 
-    # Some dastardly metaprogramming to set up some Sequel models from a user-supplied config file. Within the Pull class, we can use ::Campaign, ::Subscriber, and ::Junction when needed.
+    # Some dastardly metaprogramming to set up some Sequel models from a
+    # user-supplied config file. Within the Pull class, we can use ::Campaign,
+    # ::Subscriber, and ::Junction when needed.
     ["campaign", "subscriber", "junction"].each do |m|
       # 'Dataset' in this case means table name - as defined in your config file.
       dataset = ::PULL_CONFIG[m.to_sym][:name].downcase.to_sym
@@ -15,7 +17,8 @@ class Mailer::Integration::Pull < Mailer::Integration
       klass = Class.new(Sequel::Model(dataset)) do
         # The config file defines the assocations e.g. many-to-one between tables.
         ::PULL_CONFIG[m.to_sym][:associations].each do |assoc|
-          # If your tables don't conform to Sequel conventions, you'll need to pass in some opts to get the foreign keys etc. right.
+          # If your tables don't conform to Sequel conventions, you'll need to
+          # pass in some opts to get the foreign keys etc. right.
           method(assoc[:type]).call(assoc[:model], assoc[:opts])
         end
       end
@@ -138,10 +141,11 @@ class Mailer::Integration::Pull < Mailer::Integration
     # Sort into lists by action, and sync back to our database in batches
     action_lists = {}
 
-    active_emails.each do |email|
-      actions = email["activity"].collect { |activity| activity["action"] }
+    active_emails.each do |row|
+      email, *activities = row.to_a.flatten
+      actions = activities.collect { |a| a["action"] }
 
-      (action_lists[action_with_priority(actions)] ||= []) << email["email_address"]
+      (action_lists[action_with_priority(actions)] ||= []) << email
     end
 
     action_lists.each do |action, emails|
@@ -156,22 +160,13 @@ class Mailer::Integration::Pull < Mailer::Integration
     return "forwarded"    if actions.include?("forward")
     return "clicked"      if actions.include?("click")
     return "opened"       if actions.include?("open")
-    return "bounced"      if actions.include?("bounce")
+    return "bouncing"     if actions.include?("bounce")
   end
 
-  def get_campaign_activity(campaign_id, active_emails=[], offset=0)
-    response = ::API.reports(campaign_id).email_activity.retrieve(params: { offset: offset })
-    active_emails = active_emails | response.body["emails"]
-
-    if response.body["total_items"] < offset + 10
-      active_emails
-    else
-      get_campaign_activity(campaign_id, active_emails, offset + 10)
-    end
-  end
-
-  def action_lookup
-    { "open" => "opened", "click" => "clicked", "bounce" => "bounced", "unsubscribe" => "unsubscribed", "forward" => "forwarded" }
+  # Now using Export API - much faster than recursive method against standard
+  # API with pagination. Returns data in different & more compact format.
+  def get_campaign_activity(campaign_id)
+    ::EXPORT_API.campaign_subscriber_activity(id: campaign_id)
   end
 
   ## Methods below are for instantiating request objects to the mailer ::API.

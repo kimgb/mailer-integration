@@ -25,14 +25,14 @@ APP_ROOT = Pathname(__FILE__).dirname.parent
 APP_CONFIG ||= YAML.load(File.read(APP_ROOT + "config" + "config.yml")).freeze
 PULL_CONFIG ||= YAML.load(File.read(APP_ROOT + "config" + "pull.yml")).freeze
 
-# Set API key on Gibbon globally
-Gibbon::Request.api_key = APP_CONFIG[:api_key]
-
 # Database and API objects
 DB ||= Sequel.connect(APP_CONFIG[:db_connect])
 # `sequel -m db/migrations/ sqlite://app.db`
 APPDB ||= Sequel.sqlite((APP_ROOT + "db" + "app.db").to_s)
-API = Gibbon::Request.new
+
+# Set up constants for the Mailchimp standard and Export APIs.
+API = Gibbon::Request.new(api_key: APP_CONFIG[:api_key])
+EXPORT_API = Gibbon::Export.new(api_key: APP_CONFIG[:api_key])
 
 # Schema transformations
 CAMPAIGN = PULL_CONFIG[:campaign].freeze

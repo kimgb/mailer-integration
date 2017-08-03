@@ -37,15 +37,12 @@ class Mailer::Integration::Push < Mailer::Integration
 
     threads = []
     begin
-      # Four threads runs at concurrency limit most of the time, but leave gaps (this is desirable, I think). I've used mutex in the past here, but now the only shared resource is a Logger, which rolls its own mutex.
-      send_contacts(0)
-      #(0..(@thread_count - 1)).map { |i| threads << sync_thread(i) }
-      #threads.map(&:join)
+      send_contacts()
 
       logger.info "Finished, saving this run as complete"
       save_runtime(@this_runtime)
     # Keep an eye out for more specific errors
-    rescue Exception => err
+    rescue StandardError => err
       logger.error "ERROR #{err.class}: #{err.message}"
       logger.error err.backtrace
     ensure
@@ -119,19 +116,8 @@ class Mailer::Integration::Push < Mailer::Integration
     API.lists(config.list_id).interest_categories(category_id).interests(interests[name]).retrieve
   end
 
-  # Spawns a subscriber sync thread.
-  def sync_thread(i)
-    logger.debug "Spooling up sync thread #{i}"
-
-    Thread.new do
-      send_contacts(i)
-    end
-  end
-
   def create_fields(fields)
-    http = http_root
-
-    existing_fields = http.lists(config.list_id).merge_fields
+    existing_fields = API.lists(config.list_id).merge_fields
       .retrieve(params: { fields: "merge_fields.name", count: 1000 })
       .body[:merge_fields]
       .map{|i| i[:name]}
@@ -146,34 +132,49 @@ class Mailer::Integration::Push < Mailer::Integration
 
     new_fields.each do |f|
       logger.info "Syncing new field #{f}"
-      http.lists(config.list_id).merge_fields.create(body: {name: f.to_s, type: "text", tag: f.to_s})
+      API.lists(config.list_id).merge_fields.create(
+        body: {name: f.to_s, type: "text", tag: f.to_s}
+      )
     end
   end
 
   def delete_all_fields
-    existing_fields =  http_root.lists(config.list_id).merge_fields.retrieve(params: { fields: 'merge_fields.merge_id' }).body[:merge_fields].map{|i| i[:merge_id]}
+    existing_fields = http_root.lists(config.list_id).merge_fields.retrieve(params: { fields: 'merge_fields.merge_id' }).body[:merge_fields].map{|i| i[:merge_id]}
     existing_fields.each { |i| http_root.lists(config.list_id).merge_fields(i).delete }
   end
 
-  def send_contacts(i)
-    http = http_root(i)
+  def stale_emails
+    return @stale_emails if @stale_emails.present?
 
-    operations = []
-    (i..@contacts.size - 1).step(@thread_count) do |n|
-      body = parameterise(@contacts[n])
-      operations << {
+    response = EXPORT_API.list(id: config.list_id)
+
+    # NOTE stripping whitespace may be needed in addition to downcasing?
+    # Emails in the first column, first row is headers.
+    extant_emails = response.map(&:first)[1..-1].map(&:downcase)
+    new_emails = @contacts.map { |c| c[:email].downcase }
+
+    @stale_emails = extant_emails - new_emails
+  end
+
+  def send_contacts
+    put_operations = contacts.map(&method(:parameterise)).map do |contact|
+      {
         method: "PUT",
-        path: "lists/#{config.list_id}/members/#{Digest::MD5.hexdigest body['email_address']}",
-        #path: "lists/#{config.list_id}/members",
-        body: body.to_json
+        path: "lists/#{config.list_id}/members/#{Digest::MD5.hexdigest(contact["email_address"])}",
+        body: contact.to_json
       }
     end
 
-    #puts operations
+    delete_operations = stale_emails.map do |email|
+      {
+        method: "DELETE",
+        path: "lists/#{config.list_id}/members/#{Digest::MD5.hexdigest(email)}"
+      }
+    end
 
     batch = http.batches.create({
       body: {
-        operations: operations
+        operations: put_operations + delete_operations
       }
     })
 
@@ -202,16 +203,12 @@ class Mailer::Integration::Push < Mailer::Integration
   end
 
   def parameterise(contact)
-    result = {
+    {
       "status" => contact[:subscription_status],
-      "email_address" => contact[:email],
+      "email_address" => contact[:email].downcase,
       "merge_fields" => merge_fields(contact),
       "interests" => interest_fields(contact)
     }
-    result
-    #payload.merge!(config.friendly_field_map(contact)) unless config.field_map.nil?
-    #post.set_form_data(payload)
-    #post
   end
 
   def merge_fields(contact)
