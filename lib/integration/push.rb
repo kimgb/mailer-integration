@@ -213,7 +213,7 @@ class Mailer::Integration::Push < Mailer::Integration
 
   def merge_fields(contact)
     result = {}
-    contact.slice(*config.merge_fields(contact.stringify_keys).map(&:to_sym)).each do |k,v|
+    contact.slice(*config.merge_fields(contact.keys).map(&:to_sym)).each do |k,v|
       result[k.upcase] = v unless v.nil?
     end
 
