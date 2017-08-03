@@ -119,8 +119,8 @@ class Mailer::Integration::Push < Mailer::Integration
   def create_fields(fields)
     existing_fields = API.lists(config.list_id).merge_fields
       .retrieve(params: { fields: "merge_fields.name", count: 1000 })
-      .body[:merge_fields]
-      .map{|i| i[:name]}
+      .body["merge_fields"]
+      .map{|i| i["name"]}
       .uniq
 
     new_fields = fields - existing_fields
@@ -139,7 +139,7 @@ class Mailer::Integration::Push < Mailer::Integration
   end
 
   def delete_all_fields
-    existing_fields = http_root.lists(config.list_id).merge_fields.retrieve(params: { fields: 'merge_fields.merge_id' }).body[:merge_fields].map{|i| i[:merge_id]}
+    existing_fields = http_root.lists(config.list_id).merge_fields.retrieve(params: { fields: 'merge_fields.merge_id' }).body["merge_fields"].map{|i| i[:merge_id]}
     existing_fields.each { |i| http_root.lists(config.list_id).merge_fields(i).delete }
   end
 
@@ -165,6 +165,8 @@ class Mailer::Integration::Push < Mailer::Integration
       }
     end
 
+    logger.info "#{put_operations.size} PUT operations composed"
+
     delete_operations = stale_emails.map do |email|
       {
         method: "DELETE",
@@ -172,34 +174,34 @@ class Mailer::Integration::Push < Mailer::Integration
       }
     end
 
-    batch = http.batches.create({
+    logger.info "#{delete_operations.size} DELETE operations composed"
+
+    batch = API.batches.create({
       body: {
         operations: put_operations + delete_operations
       }
     })
 
-    logger.info "Batch #{batch.body[:id]} starting"
+    logger.info "Batch #{batch.body["id"]} starting"
 
-    batch = wait_for(http, batch.body[:id])
+    batch = wait_for(batch.body["id"])
 
-    total = batch.body[:total_operations]
-    errors = batch.body[:errored_operations]
-    response_body_url = batch.body[:response_body_url]
+    total = batch.body["total_operations"]
+    errors = batch.body["errored_operations"]
+    response_body_url = batch.body["response_body_url"]
 
-    logger.info "Batch #{batch.body[:id]} finished, #{errors} errors of #{total} members.  response_body_url: #{response_body_url}"
+    logger.info "Batch #{batch.body["id"]} finished, #{errors} errors of #{total} members.  response_body_url: #{response_body_url}"
 
     batch
   end
 
-  def wait_for(http, batch_id)
-    batch = nil
-    loop do
-      sleep 3
-      batch =  http.batches(batch_id).retrieve
-      break if "finished" == batch.body[:status]
-    end
+  def wait_for(batch_id)
+    response = API.batches(batch_id).retrieve
 
-    batch
+    return response if response.body["status"] == "finished"
+
+    sleep 3
+    wait_for(batch_id)
   end
 
   def parameterise(contact)

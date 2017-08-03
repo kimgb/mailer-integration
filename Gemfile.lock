@@ -42,7 +42,7 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport
-  gibbon
+  gibbon (~> 3.1.0)
   pry-byebug
   sequel
   slack-notifier
