@@ -1,9 +1,10 @@
 class Mailer::Integration::Push::Configuration
-  attr_reader :list_id, :table, :field_exclusions, :since
+  attr_reader :list_id, :table, :purge_stale_emails, :field_exclusions, :since
 
   def initialize(yaml)
     @list_id = yaml[:list_id]
     @table = yaml[:table]
+    @purge_stale_emails = yaml[:purge_stale_emails]
     @field_exclusions = yaml[:field_exclusions]
     @since = yaml[:since]
   end

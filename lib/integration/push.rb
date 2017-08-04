@@ -158,7 +158,7 @@ class Mailer::Integration::Push < Mailer::Integration
   end
 
   def send_contacts
-    put_operations = contacts.map(&method(:parameterise)).map do |contact|
+    operations = contacts.map(&method(:parameterise)).map do |contact|
       {
         method: "PUT",
         path: "lists/#{config.list_id}/members/#{Digest::MD5.hexdigest(contact["email_address"])}",
@@ -168,18 +168,20 @@ class Mailer::Integration::Push < Mailer::Integration
 
     logger.info "#{put_operations.size} PUT operations composed"
 
-    delete_operations = stale_emails.map do |email|
-      {
-        method: "DELETE",
-        path: "lists/#{config.list_id}/members/#{Digest::MD5.hexdigest(email)}"
-      }
+    if config.purge_stale_emails
+      operations += stale_emails.map do |email|
+        {
+          method: "DELETE",
+          path: "lists/#{config.list_id}/members/#{Digest::MD5.hexdigest(email)}"
+        }
+      end
     end
 
     logger.info "#{delete_operations.size} DELETE operations composed"
 
     batch = API.batches.create({
       body: {
-        operations: put_operations + delete_operations
+        operations: operations
       }
     })
 
