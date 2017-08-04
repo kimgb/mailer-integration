@@ -26,7 +26,8 @@ class Mailer::Integration::Push < Mailer::Integration
     logger.info "Done syncing interests"
     logger.info "Fetching contacts to be synced from database"
 
-    @contacts = DB[config.table].where(config.constraints(read_runtime)).all
+    # @contacts = DB[config.table].where(config.constraints(read_runtime)).all
+    @contacts = DB[config.table].all
 
     logger.info "Checking for new fields"
     create_fields(config.merge_fields(columns)) unless @contacts.empty?
@@ -150,7 +151,7 @@ class Mailer::Integration::Push < Mailer::Integration
 
     # NOTE stripping whitespace may be needed in addition to downcasing?
     # Emails in the first column, first row is headers.
-    extant_emails = response.map(&:first)[1..-1].map(&:downcase)
+    extant_emails = response.map(&:first)[1..-1].compact.map(&:downcase)
     new_emails = @contacts.map { |c| c[:email].downcase }
 
     @stale_emails = extant_emails - new_emails
