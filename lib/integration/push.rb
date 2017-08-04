@@ -166,7 +166,7 @@ class Mailer::Integration::Push < Mailer::Integration
       }
     end
 
-    logger.info "#{put_operations.size} PUT operations composed"
+    logger.info "#{contacts.size} PUT operations composed"
 
     if config.purge_stale_emails
       operations += stale_emails.map do |email|
@@ -177,7 +177,7 @@ class Mailer::Integration::Push < Mailer::Integration
       end
     end
 
-    logger.info "#{delete_operations.size} DELETE operations composed"
+    logger.info "#{stale_emails.size} DELETE operations composed"
 
     batch = API.batches.create({
       body: {

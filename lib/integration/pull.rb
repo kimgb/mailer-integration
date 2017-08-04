@@ -127,10 +127,7 @@ class Mailer::Integration::Pull < Mailer::Integration
       logger.info "Updated receipt status on #{junction_updates} junction rows in #{timer}"
 
       # Create joins thru the junction table, where there are none yet. Note Sequel's double-underscore convention - shorthand for specifying explicitly the table and column to avoid ambiguity errors. Also note Sequel's t# convention - joined tables are aliased as t1, t2, etc.
-      inserts = subscribers.left_join(junction, SUBSCRIBER[:key] => JUNCTION[:subscriber_key])
-        .where("t1__#{JUNCTION[:campaign_key]}".to_sym => nil)
-        .select("#{JUNCTION[:subscriber]}__#{SUBSCRIBER[:key]}".to_sym)
-        .distinct.map { |c| [c[SUBSCRIBER[:key]], campaign[CAMPAIGN[:key]], *(JUNCTION[:static_cols] || {}).values, health] }
+      inserts = subscribers.left_join(junction, SUBSCRIBER[:key] => JUNCTION[:subscriber_key]).where("t1__#{JUNCTION[:campaign_key]}".to_sym => nil).select("#{JUNCTION[:subscriber]}__#{SUBSCRIBER[:key]}".to_sym).distinct.map { |c| [c[SUBSCRIBER[:key]], campaign[CAMPAIGN[:key]], *(JUNCTION[:static_cols] || {}).values, health] }
       logger.debug "Composed insert in #{timer}, now executing"
 
       # And insert them in a batch
