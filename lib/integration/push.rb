@@ -175,9 +175,10 @@ class Mailer::Integration::Push < Mailer::Integration
           path: "lists/#{config.list_id}/members/#{Digest::MD5.hexdigest(email)}"
         }
       end
+
+      logger.info "#{stale_emails.size} DELETE operations composed"
     end
 
-    logger.info "#{stale_emails.size} DELETE operations composed"
 
     batch = API.batches.create({
       body: {
