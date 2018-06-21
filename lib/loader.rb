@@ -4,7 +4,6 @@ require 'active_support/core_ext/hash'
 require 'active_support/core_ext/string/inflections'
 
 # Installed Gems
-require 'slack-notifier'
 require 'sequel'
 require 'pry'
 require 'gibbon'

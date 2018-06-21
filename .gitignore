@@ -12,3 +12,6 @@
 
 # Don't commit SQLite database files.
 *.db
+
+# Don't commit ruby version
+.ruby-version

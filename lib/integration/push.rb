@@ -36,7 +36,6 @@ class Mailer::Integration::Push < Mailer::Integration
     logger.info "Found #{contacts.size} contacts to be synced"
     logger.info "BEGINNING SYNC TO MAILER"
 
-    threads = []
     begin
       send_contacts()
 
