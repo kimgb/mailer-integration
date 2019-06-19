@@ -178,7 +178,6 @@ class Mailer::Integration::Push < Mailer::Integration
       logger.info "#{stale_emails.size} DELETE operations composed"
     end
 
-
     batch = API.batches.create({
       body: {
         operations: operations
@@ -202,8 +201,12 @@ class Mailer::Integration::Push < Mailer::Integration
     response = API.batches(batch_id).retrieve
 
     return response if response.body["status"] == "finished"
+  rescue Gibbon::MailChimpError => err
+    logger.error "Gibbon error communicating with Mailchimp: #{err.name}, details in last_error.txt"
+    save_error(err)
+  ensure
+    sleep 10
 
-    sleep 3
     wait_for(batch_id)
   end
 

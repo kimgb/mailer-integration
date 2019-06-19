@@ -21,6 +21,10 @@ module Mailer
       log_dir + "last_run.txt"
     end
 
+    def error_file
+      log_dir + "last_error.txt"
+    end
+
     def log_dir
       return @log_dir if @log_dir
 
@@ -58,6 +62,13 @@ module Mailer
 
     def save_runtime(time)
       File.open(run_file, "w") { |f| f.puts time.utc.strftime("%FT%T") }
+    end
+
+    def save_error(err)
+      File.open(error_file, "w") do |f|
+        f.puts err.inspect
+        err.backtrace.each { |traceline| f.puts traceline }
+      end rescue nil
     end
   end
 end
