@@ -198,13 +198,15 @@ class Mailer::Integration::Push < Mailer::Integration
   end
 
   def wait_for(batch_id)
-    response = API.batches(batch_id).retrieve
+    begin
+      response = API.batches(batch_id).retrieve
 
-    return response if response.body["status"] == "finished"
-  rescue Gibbon::MailChimpError => err
-    logger.error "Gibbon error communicating with Mailchimp: #{err.name}, details in last_error.txt"
-    save_error(err)
-  ensure
+      return response if response.body["status"] == "finished"
+    rescue Gibbon::MailChimpError => err
+      logger.error "Gibbon error communicating with Mailchimp: #{err.name}, details in last_error.txt"
+      save_error(err)
+    end
+
     sleep 10
 
     wait_for(batch_id)
