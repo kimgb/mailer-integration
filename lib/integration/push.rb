@@ -1,7 +1,7 @@
 require 'digest'
 
 class Mailer::Integration::Push < Mailer::Integration
-  attr_reader :config, :contacts, :columns
+  attr_reader :config, :contacts, :columns, :schema
 
   # Mailer::Integration::Push.new()
   def initialize(path)
@@ -14,6 +14,7 @@ class Mailer::Integration::Push < Mailer::Integration
     @thread_count = ::APP_CONFIG[:thread_count]
     @config = Configuration.new(YAML.load(File.read(base_dir + (base_dir.basename.to_s + ".yml"))))
     @columns = DB[config.table].columns
+    @schema = DB.schema(config.table)
   end
 
   def run!
@@ -30,7 +31,10 @@ class Mailer::Integration::Push < Mailer::Integration
     @contacts = DB[config.table].all
 
     logger.info "Checking for new fields"
-    create_fields(config.merge_fields(columns)) unless @contacts.empty?
+    fields = config.merge_fields(columns)
+    fields_w_type = schema.select { |f| fields.include?(f[0].to_s) }.to_h
+
+    create_fields(fields_w_type) unless @contacts.empty?
     # create_fields(config.merge_fields(@contacts[0])) if @contacts.size > 0
 
     logger.info "Found #{contacts.size} contacts to be synced"
@@ -123,7 +127,9 @@ class Mailer::Integration::Push < Mailer::Integration
       .map{|i| i["name"]}
       .uniq
 
-    new_fields = fields - existing_fields
+    field_names = fields.keys.map(&:to_s)
+
+    new_fields = (field_names - existing_fields).map(&:to_sym)
     if new_fields.empty?
       logger.info "No new fields found"
     else
@@ -132,9 +138,15 @@ class Mailer::Integration::Push < Mailer::Integration
 
     new_fields.each do |f|
       logger.info "Syncing new field #{f}"
-      API.lists(config.list_id).merge_fields.create(
-        body: {name: f.to_s, type: "text", tag: f.to_s}
-      )
+
+      body = { name: f.to_s, tag: f.to_s }
+      if fields[f][:db_type] == "datetime"
+        body.merge!({ type: "date" })
+      else
+        body.merge!({ type: "text" })
+      end
+
+      API.lists(config.list_id).merge_fields.create(body: body)
     end
   end
 
@@ -224,7 +236,11 @@ class Mailer::Integration::Push < Mailer::Integration
   def merge_fields(contact)
     result = {}
     contact.slice(*config.merge_fields(contact.keys).map(&:to_sym)).each do |k,v|
-      result[k.upcase] = v unless v.nil?
+      if v.class == Time
+        result[k.upcase] = v.to_date
+      elsif !v.nil?
+        result[k.upcase] = v
+      end
     end
 
     result

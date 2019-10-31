@@ -19,7 +19,7 @@ OptionParser.new do |opts|
   opts.on("-i", "--integration=INTEGRATION", "Specify the integration") do |i|
     integration_name = i
   end
-  
+
   opts.on("--no-down",
           "Don't run the sync from Mailchimp.") do
     no_down = true
@@ -61,4 +61,3 @@ unless no_up
   end
   puts "Finished upload..."
 end
-
