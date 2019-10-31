@@ -5,6 +5,7 @@ require_relative 'loader'
 log_level = 1
 no_down = false
 no_up = false
+integration_name=nil
 
 OptionParser.new do |opts|
   opts.banner = "Usage: ruby start [options]"
@@ -15,6 +16,10 @@ OptionParser.new do |opts|
     log_level = i
   end
 
+  opts.on("-i", "--integration=INTEGRATION", "Specify the integration") do |i|
+    integration_name = i
+  end
+  
   opts.on("--no-down",
           "Don't run the sync from Mailchimp.") do
     no_down = true
@@ -30,17 +35,22 @@ end.parse!
 
 # the pull integration bases itself out of APP_ROOT
 unless no_down
+  puts "Starting download..."
   down_sync = Mailer::Integration::Pull.new(APP_ROOT)
   down_sync.run!
 end
 
+
 unless no_up
+  puts "Starting upload..."
   # load all integration folders into an array
   integrations = Pathname.glob(APP_ROOT + "integrations" + "*")
   integrations.each do |integration|
     # ignore disabled integrations
     next if integration.basename.to_s.start_with?("_")
+    next unless integration_name.blank? || integration_name == integration.basename.to_s
     begin
+      puts "Starting #{integration.basename.to_s}"
       up_sync = Mailer::Integration::Push.new(integration)
       up_sync.logger.level = log_level
       up_sync.run!
@@ -49,4 +59,6 @@ unless no_up
       "Path was not a directory, skipping this integration"
     end
   end
+  puts "Finished upload..."
 end
+
