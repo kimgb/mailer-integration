@@ -138,7 +138,7 @@ class Mailer::Integration::Push < Mailer::Integration
     new_fields.each do |f|
       body = { name: f.to_s, tag: f.to_s }
       if fields[f][:db_type] == "datetime"
-        body.merge!({ type: "date" })
+        body.merge!({ type: "date", options: { date_format: "dd/mm/yyyy" }})
       else
         body.merge!({ type: "text" })
       end
