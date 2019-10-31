@@ -1,7 +1,7 @@
 require 'digest'
 
 class Mailer::Integration::Push < Mailer::Integration
-  attr_reader :config, :contacts, :columns, :schema
+  attr_reader :config, :contacts, :columns
 
   # Mailer::Integration::Push.new()
   def initialize(path)
@@ -14,7 +14,6 @@ class Mailer::Integration::Push < Mailer::Integration
     @thread_count = ::APP_CONFIG[:thread_count]
     @config = Configuration.new(YAML.load(File.read(base_dir + (base_dir.basename.to_s + ".yml"))))
     @columns = DB[config.table].columns
-    @schema = DB.schema(config.table)
   end
 
   def run!
@@ -32,7 +31,7 @@ class Mailer::Integration::Push < Mailer::Integration
 
     logger.info "Checking for new fields"
     fields = config.merge_fields(columns)
-    fields_w_type = schema.select { |f| fields.include?(f[0].to_s) }.to_h
+    fields_w_type = DB.schema(config.table).select { |f| fields.include?(f[0].to_s) }.to_h
 
     create_fields(fields_w_type) unless @contacts.empty?
     # create_fields(config.merge_fields(@contacts[0])) if @contacts.size > 0
@@ -137,14 +136,14 @@ class Mailer::Integration::Push < Mailer::Integration
     end
 
     new_fields.each do |f|
-      logger.info "Syncing new field #{f}"
-
       body = { name: f.to_s, tag: f.to_s }
       if fields[f][:db_type] == "datetime"
         body.merge!({ type: "date" })
       else
         body.merge!({ type: "text" })
       end
+
+      logger.info "Syncing new field #{f} as #{body[:type]}"
 
       API.lists(config.list_id).merge_fields.create(body: body)
     end
