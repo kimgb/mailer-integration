@@ -1,0 +1,20 @@
+# Mostly a placeholder for now. The pull won't connect straight to a database
+# any more, if it happens at all.
+
+:campaign:
+  :name: campaigns
+  :associations:
+    # associations is an array of hashes with keys [:type, :model, :opts]
+  
+:subscriber:
+  :name: subscribers
+  :associations:
+    # associations is an array of hashes with keys [:type, :model, :opts]
+  
+:junction:
+  :name: subscribers_campaigns
+  :associations: 
+    # associations is an array of hashes with keys [:type, :model, :opts]
+    # the assoc[:type] method is called with assoc[:model] and assoc[:opts] as
+    # arguments; all three will be passed straight to a class inhering from 
+    # Sequel::Model.

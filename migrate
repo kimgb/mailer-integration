@@ -1,3 +1,0 @@
-#!/bin/bash
-
-sequel -m db/migrations/ sqlite://db/app.db

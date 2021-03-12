@@ -1,0 +1,3 @@
+#!/bin/bash
+
+bundle exec sequel -m db/migrations/ sqlite://db/app.db

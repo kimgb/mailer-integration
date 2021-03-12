@@ -1,0 +1,9 @@
+#!/bin/sh
+echo "Installing bundler"
+gem list -i bundler -v '2.1.4' || gem install bundler -v '2.1.4'
+
+echo "Bundling gems"
+bundle update --bundler
+bundle check || bundle install --jobs 4 --retry 3
+
+exec bundle exec ruby ./lib/start --no-down

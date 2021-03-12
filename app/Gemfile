@@ -1,0 +1,14 @@
+source 'https://rubygems.org'
+
+gem 'sequel'
+
+# 1.0.5 for SQL Server 2005
+#gem 'tiny_tds', '~> 1.0.5'
+# More recent versions of SQL Server can use a more recent version of tiny_tds
+gem 'tiny_tds', '~> 2.1.0'
+gem 'sqlite3', '~> 1.4.2'
+gem 'pry-byebug'
+
+# 3.1.0 onwards includes Export API support
+gem 'gibbon', '~> 3.3.4'
+gem 'activesupport', '~> 5.2.4'

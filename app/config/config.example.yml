@@ -1,6 +1,4 @@
 api_key:
-mailer_uri: <Active Campaign address>
-mailer_port: <Active Campaign port (e.g. 443 for SSL)
 
 # The slice size used when pushing to your local database. Too large and I got timeouts.
 # I settled on 1,000 as it reliably sidestepped these timeouts. Your db may be different.

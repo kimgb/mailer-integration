@@ -19,14 +19,22 @@ class Mailer::Integration::Push < Mailer::Integration
   def run!
     @this_runtime = Time.new.utc
     logger.info "Run commencement at #{@this_runtime} (all times in UTC)"
-    logger.info "Syncing interests"
-
+    
+    logger.info "Syncing list data"
+    sync_list()
+    logger.info "Done syncing list"
+    
+    logger.info "Syncing interests data"
     sync_interests()
-
     logger.info "Done syncing interests"
+
     logger.info "Fetching contacts to be synced from database"
 
     # @contacts = DB[config.table].where(config.constraints(read_runtime)).all
+    # "table" is a misnomer here, this should really be a view.
+    # email, firstname, lastname are the only mandatory fields IIRC.
+    # any other column will either be pushed to a merge field (default)
+    # or an interest category (if it has format interestCategory$Interest)
     @contacts = DB[config.table].all
 
     logger.info "Checking for new fields"
@@ -54,6 +62,28 @@ class Mailer::Integration::Push < Mailer::Integration
   end
 
   private
+  def sync_list
+    @list = List.find(name: config.name) || create_list(config.name)
+  end
+  
+  def create_list(name)
+    logger.info "Creating list '#{name}'"
+    
+    remote_lists = API.lists.retrieve.body["lists"]
+    remote_list = lists.find { |l| l["name"] == name }
+    
+    unless remote_list.present?
+      # There are a lot of required properties when creating a list.
+      # See the example integration config file.
+      settings = config.settings.merge(name: name)
+      response = API.lists.create(settings)
+      
+      remote_list = response.body
+    end
+    
+    List.create(name: name, mailchimp_id: remote_list["id"])
+  end
+  
   # TODO For ease of operation in development etc, needs to pick up on
   # categories and interests that have already been pushed to Mailchimp.
   def sync_interests
@@ -112,6 +142,7 @@ class Mailer::Integration::Push < Mailer::Integration
 
   def find_or_create_remote_interest(category_id, name)
     API.lists(config.list_id).interest_categories(category_id).interests.create(body: { name: name })
+  # Dodgy rescue. Can't check for existence in a better way?
   rescue Gibbon::MailChimpError => e
     interests = API.lists(config.list_id).interest_categories(category_id).interests.retrieve
       .body["interests"].map { |i| [i["name"], i["id"]] }.to_h
@@ -160,7 +191,7 @@ class Mailer::Integration::Push < Mailer::Integration
     response = EXPORT_API.list(id: config.list_id)
 
     # NOTE stripping whitespace may be needed in addition to downcasing?
-    # Emails in the first column, first row is headers.
+    # Emails in the first column; first row is headers.
     extant_emails = response.map(&:first)[1..-1].compact.map(&:downcase)
     new_emails = @contacts.map { |c| c[:email].downcase }
 
@@ -225,6 +256,7 @@ class Mailer::Integration::Push < Mailer::Integration
 
   def parameterise(contact)
     {
+      "status_if_new" => contact[:subscription_status],
       "status" => contact[:subscription_status],
       "email_address" => contact[:email].downcase,
       "merge_fields" => merge_fields(contact),

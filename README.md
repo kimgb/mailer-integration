@@ -1,12 +1,12 @@
-## API Integration with self hosted Active Campaign
+## API Integration with Mailchimp
 
-This application serves as a bridge between a SQL Server-based CRM and an old self-hosted version of the Active Campaign email marketing software.
+This application serves as a bridge between a SQL Server-based CRM and the Mailchimp API.
 
 #### Setting up the application
 
-The application needs to be configured with Active Campaign's API key, URI and port, as well as the connection details for the database. See `/config/config.example.yml`.
+The application needs to be configured with Mailchimp's API key, as well as the connection details for the database. See `/config/config.example.yml`.
 
-It's only built to work with SQL Server and the (woefully outdated) self-hosted version of Active Campaign, API quirks and all. It performs both a "pull" where it collects new data from Active Campaign into the main person/user/contact table, and a variable number of configurable "pushes" where you can specify a source view or table with some number of timestamps to allow filtering, a destination list on Active Campaign, and any field mapping that's needed.
+It's only built to work with SQL Server and Mailchimp. It performs both a "pull" where it collects new data from Mailchimp into the main person/user/contact table, and a variable number of configurable "pushes" where you can specify a source view or table with some number of timestamps to allow filtering, a destination list on Active Campaign, and any field mapping that's needed.
 
 #### Setting up a 'push' or 'up' sync
 
@@ -22,7 +22,7 @@ The application comes with its own ruby runner script, this accepts a few flags,
 
 #### Configuring the 'down' sync
 
-The application only runs one down sync, and is currently hardcoded to cut off campaigns after a month - you might miss out on the thin end of the infamous long tail. The config file consists of your schema transform from Active Campaign to your local database (SQL Server, I hope). You can find it in `/config/pull.yml`.
+The application only runs one down sync, and is currently hardcoded to cut off campaigns after a month - you might miss out on the thin end of the infamous long tail. The config file consists of your schema transform from Mailchimp to your local SQL Server database. You can find it in `/config/pull.yml`.
 
 #### Watch this space
 

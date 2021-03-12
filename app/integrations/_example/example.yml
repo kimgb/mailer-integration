@@ -1,0 +1,14 @@
+:list_id: 111 #id of the target list on Mailchimp
+:table: :emailIntegrationMailChimp #can be the name of a table or view, Sequel's not fussy
+:since: # an array of datetime columns that are checked against the sync's last run time
+  - SubscriberModified
+  - RoleChanged
+# Map for custom Mailchimp fields. The local table/view column on the left, the
+# corresponding mailer field ID on the right. Note that the application expects
+# "email", "firstname", "lastname" columns as a bare minimum, regardless of
+# whether you have anything. You can delete all of this - the field_map is
+# optional.
+:field_map:
+  :id: 1
+  :state: 2
+  :tags: 3
