@@ -43,7 +43,7 @@ module Mailer
     end
 
     def set_http_root(root_name)
-      http = instance_variable_set(root_name, Gibbon::Request.new(api_key: ::APP_CONFIG[:api_key], debug: ::APP_CONFIG[:api_debug], symbolize_keys: true))
+      http = instance_variable_set(root_name, Gibbon::Request.new(api_key: ENV['MAILCHIMP_API_KEY'], debug: ::APP_CONFIG[:api_debug], symbolize_keys: true))
 
       http
     end

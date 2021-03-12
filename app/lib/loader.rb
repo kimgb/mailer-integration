@@ -42,6 +42,7 @@ API = Gibbon::Request.new(api_key: ENV['MAILCHIMP_API_KEY'])
 EXPORT_API = Gibbon::Export.new(api_key: ENV['MAILCHIMP_API_KEY'])
 
 # Lastly, our lib files - as they sometimes rely on the constants defined above
+require_relative '../models/list'
 require_relative '../models/category'
 require_relative '../models/interest'
 require_relative 'integration_base'

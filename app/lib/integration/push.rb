@@ -11,7 +11,7 @@ class Mailer::Integration::Push < Mailer::Integration
       raise ArgumentError, "#{path} is not a directory"
     end
 
-    @thread_count = ::APP_CONFIG[:thread_count]
+    # @thread_count = ::APP_CONFIG[:thread_count]
     @config = Configuration.new(YAML.load(File.read(base_dir + (base_dir.basename.to_s + ".yml"))))
     @columns = DB[config.table].columns
   end
@@ -31,12 +31,16 @@ class Mailer::Integration::Push < Mailer::Integration
     logger.info "Fetching contacts to be synced from database"
 
     # @contacts = DB[config.table].where(config.constraints(read_runtime)).all
-    # "table" is a misnomer here, this should really be a view.
+    # "table" is a misnomer here, this should really be a view in most cases.
     # email, firstname, lastname are the only mandatory fields IIRC.
     # any other column will either be pushed to a merge field (default)
     # or an interest category (if it has format interestCategory$Interest)
-    @contacts = DB[config.table].all
-
+    @contacts = if config.since.present?
+      DB[config.table].where(config.constraints(read_runtime)).all
+    else
+      DB[config.table].all
+    end
+    
     logger.info "Checking for new fields"
     fields = config.merge_fields(columns)
     fields_w_type = DB.schema(config.table).select { |f| fields.include?(f[0].to_s) }.to_h
@@ -70,13 +74,13 @@ class Mailer::Integration::Push < Mailer::Integration
     logger.info "Creating list '#{name}'"
     
     remote_lists = API.lists.retrieve.body["lists"]
-    remote_list = lists.find { |l| l["name"] == name }
+    remote_list = remote_lists.find { |l| l["name"] == name }
     
     unless remote_list.present?
       # There are a lot of required properties when creating a list.
       # See the example integration config file.
       settings = config.settings.merge(name: name)
-      response = API.lists.create(settings)
+      response = API.lists.create(body: settings)
       
       remote_list = response.body
     end
@@ -265,6 +269,8 @@ class Mailer::Integration::Push < Mailer::Integration
   end
 
   def merge_fields(contact)
+    # Note on Mailchimp default merge fields:
+    # FNAME, LNAME, ADDRESS and PHONE are all present on a fresh list.
     result = {}
     contact.slice(*config.merge_fields(contact.keys).map(&:to_sym)).each do |k,v|
       if v.class == Time

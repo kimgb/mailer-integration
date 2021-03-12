@@ -11,8 +11,10 @@ class Mailer::Integration::Push::Configuration
     @since = yaml[:since]
   end
 
-  def constraints(last_run)
-    since.map { |col| "#{col} > '#{last_run.strftime("%F")}'" }.join(" OR ")
+  def constraints(last_run = DateTime.new(1970, 1, 1))
+    if since.present?
+      Sequel.lit(since.map { |col| "#{col} > '#{last_run.strftime("%F")}'" }.join(" OR "))
+    else Sequel.lit("1=1") end
   end
 
   def merge_fields(columns) #(contact)

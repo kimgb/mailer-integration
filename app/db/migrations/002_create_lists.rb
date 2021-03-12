@@ -3,7 +3,7 @@ Sequel.migration do
     create_table(:lists) do
       primary_key :id
       String :mailchimp_id, null: false, unique: true, index: true
-      String :title, null: false, unique: true, index: true
+      String :name, null: false, unique: true, index: true
     end
     
     alter_table(:categories) do
