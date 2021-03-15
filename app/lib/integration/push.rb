@@ -73,6 +73,12 @@ class Mailer::Integration::Push < Mailer::Integration
   def create_list(name)
     logger.info "Creating list '#{name}'"
     
+    remote_list = find_or_create_remote_list(name)
+    
+    List.create(name: name, mailchimp_id: remote_list["id"])
+  end
+  
+  def find_or_create_remote_list(name)
     remote_lists = API.lists.retrieve.body["lists"]
     remote_list = remote_lists.find { |l| l["name"] == name }
     
@@ -85,7 +91,7 @@ class Mailer::Integration::Push < Mailer::Integration
       remote_list = response.body
     end
     
-    List.create(name: name, mailchimp_id: remote_list["id"])
+    remote_list
   end
   
   # TODO For ease of operation in development etc, needs to pick up on
