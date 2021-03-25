@@ -8,12 +8,7 @@ services:
       - BUNDLE_PATH=/usr/local/bundle
       - GEM_HOME=/usr/local/bundle
       - BUNDLER_VERSION=2.1.4
-      - EDITOR
-      - SQL_SERVER_USER
-      - SQL_SERVER_PASS
-      - SQL_SERVER_HOST
-      - SQL_SERVER_DB
-      - MAILCHIMP_API_KEY
+    env_file: .env
     volumes:
       - bundle_app:/usr/local/bundle
       - root_app:/root

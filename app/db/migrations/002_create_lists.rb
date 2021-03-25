@@ -8,6 +8,7 @@ Sequel.migration do
     
     alter_table(:categories) do
       rename_column :list_id, :mailchimp_list_id
+      set_column_allow_null :mailchimp_list_id
       add_foreign_key :list_id, :lists
     end
   end
@@ -15,6 +16,7 @@ Sequel.migration do
   down do
     alter_table(:categories) do
       drop_foreign_key :list_id
+      set_column_not_null :mailchimp_list_id
       rename_column :mailchimp_list_id, :list_id
     end
     

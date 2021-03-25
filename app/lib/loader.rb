@@ -3,6 +3,14 @@ require 'active_support/core_ext/hash'
 # String inflections give us classify, constantize etc.
 require 'active_support/core_ext/string/inflections'
 
+# Init inflections that we're likely to encounter.
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+  inflect.acronym 'ID'
+  inflect.acronym 'IDs'
+  inflect.acronym 'HSR'
+  inflect.acronym 'HSRs'
+end
+
 # Installed Gems
 require 'sequel'
 require 'pry'
