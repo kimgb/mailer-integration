@@ -14,7 +14,7 @@ class Mailer::Integration::Push < Mailer::Integration
     # @thread_count = ::APP_CONFIG[:thread_count]
     @config = Configuration.new(YAML.load(File.read(base_dir + (base_dir.basename.to_s + ".yml"))))
     @columns = DB[config.table].columns
-    
+
     @remote = OpenStruct.new
   end
   
@@ -177,7 +177,7 @@ class Mailer::Integration::Push < Mailer::Integration
   # website, and phone, to give a few examples.
   def create_fields(fields)
     @remote.merge_fields = API.lists(@list.mailchimp_id).merge_fields
-      .retrieve(params: { fields: "merge_fields.name,merge_fields.tag,merge_fields.type", count: 1000 })
+      .retrieve(params: { fields: "merge_fields.merge_id,merge_fields.name,merge_fields.tag,merge_fields.type", count: 1000 })
       .body["merge_fields"]
     
     remote_fields = @remote.merge_fields.map { |i| i["name"] }.uniq
@@ -191,7 +191,7 @@ class Mailer::Integration::Push < Mailer::Integration
       config.merge_fields_map[f] || f.to_s.titleize(keep_id_suffix: true)
     end
     
-    address_fields = config.address_columns.keys.map(&:to_s).map(&:titleize)
+    address_fields = config.address_columns.map(&:to_s).map(&:titleize)
 
     new_fields = (local_fields - remote_fields - address_fields)
     if new_fields.empty?
@@ -314,23 +314,27 @@ class Mailer::Integration::Push < Mailer::Integration
   def merge_fields(contact)
     # Note on Mailchimp default merge fields:
     # FNAME, LNAME, ADDRESS and PHONE are all present on a fresh list.
-    # These should be mapped from source data columns in the yml config file.
+    # We retrieve and store the remote list merge fields before this point in
+    # the sync. This allows the sync to be agnostic about tags (but not about
+    # names, sadly) - it looks up the tag using the name.
     
-    # Addl note on Mailchimp API behaviour.
-    # The keys in the JSON object sent must be the merge field TAGS, not the 
-    # merge field NAMES. So, TAGS must be set, they must be unique and they must
-    # be 10 characters or less. Yikes.
-    
-    # Plan:
-    # Retrieve and store the remote list merge fields in an instance variable 
-    # during the sync. At minimum, name and tag. Lookup the tags using the name
-    # during this step. We avoid setting awkward tags, but we'll still get the 
-    # right tag even if it gets changed from the default MMERGEXX.
+    # How could we be agnostic about tags *AND* names?
+    # Mailchimp provides a "merge_id" - an immutable, autoincremented
+    # integer that starts from 0 for each list (though 0 is email and not
+    # considered a "merge field").
+    #
+    # 1. We cache the "merge_id" on field creation.
+    # 2. We retrieve remote merge fields with the merge_id, name and tag.
+    # 3. We look up the tag using the cached merge_id for each field.
+    # 4. If a cached merge_id is missing from the remote data, we can re-create.
+    # 
+    # By using this process we can have a lookup hash sorted out and ready to go
+    # for this method long before it ever gets called.
     result = {}
     contact.slice(*config.merge_fields(contact.keys).map(&:to_sym)).each do |k,v|
       merge_field = if config.merge_fields_map.keys.include?(k)
         @remote.merge_fields.find { |f| f["name"] == config.merge_fields_map[k] }
-      elsif config.address_columns.keys.include?(k)
+      elsif config.address_columns.include?(k)
         @remote.merge_fields.find { |f| f["type"] == "address" }
       else
         @remote.merge_fields.find { |f| f["name"] == k.to_s.titleize(keep_id_suffix: true) }
@@ -339,7 +343,7 @@ class Mailer::Integration::Push < Mailer::Integration
       merge_field_tag = merge_field["tag"] unless merge_field.nil?
       
       if merge_field["type"] == "address" && !v.nil?
-        result[merge_field_tag] = result[merge_field_tag].to_h.merge({ config.address_columns[k] => v })
+        result[merge_field_tag] = result[merge_field_tag].to_h.merge({ config.address_fields_map[k] => v })
       elsif !merge_field_tag.nil?
         if v.class == Time
           result[merge_field_tag] = v.utc.iso8601
