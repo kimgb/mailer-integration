@@ -19,10 +19,10 @@ GEM
     sequel (4.29.0)
     slack-notifier (1.5.1)
     slop (3.6.0)
-    thread_safe (0.3.5)
+    thread_safe (0.3.6)
     tiny_tds (1.0.4)
       mini_portile2 (~> 2.0)
-    tzinfo (1.2.2)
+    tzinfo (1.2.10)
       thread_safe (~> 0.1)
 
 PLATFORMS
